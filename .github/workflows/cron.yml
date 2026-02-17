@@ -2,7 +2,7 @@ name: Tracking Bot
 
 on:
   schedule:
-    - cron: '0 * * * *'   # jalan tiap menit
+    - cron: '0 21 * * *'   # jalan tiap menit
   workflow_dispatch:
 
 jobs:

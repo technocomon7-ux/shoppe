@@ -1,0 +1,77 @@
+const axios = require("axios");
+const cheerio = require("cheerio");
+const cron = require("node-cron");
+
+const RESI = "SPXID062452428702";
+const BOT_TOKEN = "ISI_BOT_TOKEN_KAMU";
+const CHAT_ID = "ISI_CHAT_ID_KAMU";
+
+async function getTracking() {
+  try {
+    const { data } = await axios.get(
+      `https://spx.co.id/m/track?${RESI}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      }
+    );
+
+    const $ = cheerio.load(data);
+
+    // Ambil status utama
+    const status = $(".tracking-status .active").text().trim();
+
+    // Ambil event pertama (yang paling atas)
+    const firstEvent = $(".tracking-item").first().text().trim();
+
+    return {
+      status,
+      firstEvent
+    };
+
+  } catch (err) {
+    console.log("Gagal ambil tracking:", err.message);
+    return null;
+  }
+}
+
+async function sendTelegram(message) {
+  try {
+    await axios.post(
+      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+      {
+        chat_id: CHAT_ID,
+        text: message
+      }
+    );
+  } catch (err) {
+    console.log("Gagal kirim Telegram:", err.message);
+  }
+}
+
+async function checkAndSend() {
+  const result = await getTracking();
+
+  if (!result) return;
+
+  const msg = `
+📦 Update Resi ${RESI}
+
+Status: ${result.status}
+Detail:
+${result.firstEvent}
+`;
+
+  await sendTelegram(msg);
+  console.log("Update terkirim");
+}
+
+// Jalankan tiap 30 menit
+cron.schedule("*/30 * * * *", () => {
+  console.log("Cek tracking...");
+  checkAndSend();
+});
+
+// Jalankan langsung saat start
+checkAndSend();

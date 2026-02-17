@@ -1,10 +1,9 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
-const cron = require("node-cron");
 
-const RESI = "SPXID062452428702";
-const BOT_TOKEN = "ISI_BOT_TOKEN_KAMU";
-const CHAT_ID = "ISI_CHAT_ID_KAMU";
+const RESI = process.env.RESI;
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const CHAT_ID = process.env.CHAT_ID;
 
 async function getTracking() {
   try {
@@ -19,16 +18,10 @@ async function getTracking() {
 
     const $ = cheerio.load(data);
 
-    // Ambil status utama
     const status = $(".tracking-status .active").text().trim();
-
-    // Ambil event pertama (yang paling atas)
     const firstEvent = $(".tracking-item").first().text().trim();
 
-    return {
-      status,
-      firstEvent
-    };
+    return { status, firstEvent };
 
   } catch (err) {
     console.log("Gagal ambil tracking:", err.message);
@@ -51,6 +44,11 @@ async function sendTelegram(message) {
 }
 
 async function checkAndSend() {
+  if (!RESI || !BOT_TOKEN || !CHAT_ID) {
+    console.log("ENV belum lengkap!");
+    process.exit(1);
+  }
+
   const result = await getTracking();
 
   if (!result) return;
@@ -67,11 +65,5 @@ ${result.firstEvent}
   console.log("Update terkirim");
 }
 
-// Jalankan tiap 30 menit
-cron.schedule("*/30 * * * *", () => {
-  console.log("Cek tracking...");
-  checkAndSend();
-});
-
-// Jalankan langsung saat start
+// Langsung jalan
 checkAndSend();
